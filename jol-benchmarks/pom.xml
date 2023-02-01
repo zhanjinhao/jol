@@ -31,7 +31,7 @@
     <parent>
         <artifactId>jol-parent</artifactId>
         <groupId>org.openjdk.jol</groupId>
-        <version>0.17-SNAPSHOT</version>
+        <version>0.17-SNAPSHOT-ADDENDA</version>
     </parent>
 
     <artifactId>jol-benchmarks</artifactId>
@@ -106,19 +106,19 @@
                     <source>8</source>
                 </configuration>
                 <executions>
-                    <execution>
-                        <id>attach-javadoc</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                        <configuration>
-                            <excludePackageNames>
-                                sun,
-                                org.openjdk.jol.samples
-                            </excludePackageNames>
-                        </configuration>
-                    </execution>
+<!--                    <execution>-->
+<!--                        <id>attach-javadoc</id>-->
+<!--                        <phase>verify</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>jar</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <excludePackageNames>-->
+<!--                                sun,-->
+<!--                                org.openjdk.jol.samples-->
+<!--                            </excludePackageNames>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
                 </executions>
             </plugin>
             <plugin>

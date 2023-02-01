@@ -368,10 +368,120 @@ public class ClassLayout {
         return sw.toString();
     }
 
+    public String toMarkWordBinaryPrintable() {
+        return toMarkWordBinaryPrintable(classData.instance());
+    }
+
+    public String toMarkWordBinaryPrintable(Object instance) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+
+        int maxTypeLen = "TYPE".length();
+        for (FieldLayout f : fields()) {
+            maxTypeLen = Math.max(f.typeClass().length(), maxTypeLen);
+        }
+        maxTypeLen += 2;
+
+        String MSG_OBJ_HEADER = "(object header)";
+        String MSG_MARK_WORD = "(object header: mark)";
+        String MSG_CLASS_WORD = "(object header: class)";
+        String MSG_ARR_LEN = "(array length)";
+        String MSG_FIELD_GAP = "(alignment/padding gap)";
+        String MSG_OBJ_GAP = "(object alignment gap)";
+
+        int maxDescrLen = "DESCRIPTION".length();
+        maxDescrLen = Math.max(maxDescrLen, MSG_OBJ_HEADER.length());
+        maxDescrLen = Math.max(maxDescrLen, MSG_MARK_WORD.length());
+        maxDescrLen = Math.max(maxDescrLen, MSG_CLASS_WORD.length());
+        maxDescrLen = Math.max(maxDescrLen, MSG_FIELD_GAP.length());
+        maxDescrLen = Math.max(maxDescrLen, MSG_OBJ_GAP.length());
+        for (FieldLayout f : fields()) {
+            maxDescrLen = Math.max(f.shortFieldName().length(), maxDescrLen);
+        }
+        maxDescrLen += 2;
+
+        String format = "%3d %3d %" + maxTypeLen + "s %-" + maxDescrLen + "s %s%n";
+        String formatS = "%3s %3s %" + maxTypeLen + "s %-" + maxDescrLen + "s %s%n";
+
+        if (instance != null) {
+            try {
+                Class<?> klass = ClassUtils.loadClass(classData.name());
+                if (!klass.isAssignableFrom(instance.getClass())) {
+                    throw new IllegalArgumentException("Passed instance type " + instance.getClass() + " is not assignable from " + klass + ".");
+                }
+            } catch (ClassNotFoundException e) {
+                throw new IllegalArgumentException("Class is not found: " + classData.name() + ".");
+            }
+        }
+
+
+        String markStr = "N/A";
+        String classStr = "N/A";
+        String arrLenStr = "N/A";
+
+        int markSize = model.markHeaderSize();
+        int classSize = model.classHeaderSize();
+        int arrSize = model.arrayLengthHeaderSize();
+
+        int markOffset = 0;
+        int classOffset = markOffset + markSize;
+        int arrOffset = classOffset + classSize;
+
+        if (instance != null) {
+            VirtualMachine vm = VM.current();
+            if (markSize == 8) {
+                long mark = vm.getLong(instance, markOffset);
+                String decoded = (classSize > 0) ? parseMarkWord(mark) : "(Lilliput)";
+                markStr = toBinary(mark) + " " + decoded;
+            } else if (markSize == 4) {
+                int mark = vm.getInt(instance, markOffset);
+                String decoded = (classSize > 0) ? parseMarkWord(mark) : "(Lilliput)";
+                markStr = toBinary(mark) + " " + decoded;
+            }
+
+            if (classSize == 8) {
+                classStr = toBinary(vm.getLong(instance, classOffset));
+            } else if (classSize == 4) {
+                classStr = toBinary(vm.getInt(instance, classOffset));
+            }
+
+            if (classData.isArray()) {
+                arrLenStr = Integer.toString(vm.getInt(instance, arrOffset));
+            }
+        }
+
+        if (classSize > 0) {
+        }
+        if (classData.isArray()) {
+        }
+
+        long nextFree = headerSize();
+
+        for (FieldLayout f : fields()) {
+            if (f.offset() > nextFree) {
+            }
+
+            Field fi = f.data().refField();
+
+
+            nextFree = f.offset() + f.size();
+        }
+
+        long sizeOf = (instance != null) ? VM.current().sizeOf(instance) : instanceSize();
+        if (sizeOf != nextFree) {
+        }
+
+        pw.printf("Mark Word: %s", markStr);
+
+        pw.close();
+
+        return sw.toString();
+    }
+
     static final String[] ZERO_RUNS;
 
     static {
-        ZERO_RUNS = new String[16];
+        ZERO_RUNS = new String[64];
         String s = "";
         for (int c = 0; c < ZERO_RUNS.length; c++) {
             ZERO_RUNS[c] = s;
@@ -385,10 +495,38 @@ public class ClassLayout {
         return "0x" + ZERO_RUNS[deficit] + s;
     }
 
+    private static String toBinary(int x) {
+        String s = Long.toBinaryString(x);
+        int deficit = 64 - s.length();
+        String binaryStr = ZERO_RUNS[deficit] + s;
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < binaryStr.length(); i++) {
+            if (i != 0 && i % 8 == 0) {
+                result.append(" ");
+            }
+            result.append(binaryStr.charAt(i));
+        }
+        return result.toString();
+    }
+
     private static String toHex(long x) {
         String s = Long.toHexString(x);
         int deficit = 16 - s.length();
         return "0x" + ZERO_RUNS[deficit] + s;
+    }
+
+    private static String toBinary(long x) {
+        String s = Long.toBinaryString(x);
+        int deficit = 64 - s.length();
+        String binaryStr = ZERO_RUNS[deficit] + s;
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < binaryStr.length(); i++) {
+            if (i != 0 && i % 8 == 0) {
+                result.append(" ");
+            }
+            result.append(binaryStr.charAt(i));
+        }
+        return result.toString();
     }
 
     private static String parseMarkWord(int mark) {
